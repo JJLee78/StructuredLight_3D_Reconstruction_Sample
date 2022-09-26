@@ -18,5 +18,19 @@
     <ClCompile Include="StructuredLight_3D_Reconstruction_Sample.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
+    <ClCompile Include="solveTriangulation.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="configDevice.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="solveTriangulation.h">
+      <Filter>소스 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="configDevice.h">
+      <Filter>소스 파일</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
