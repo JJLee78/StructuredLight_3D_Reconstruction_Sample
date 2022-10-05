@@ -26,7 +26,11 @@ class camParam
 	Mat* mDepthMap;
 	Mat* mBackgroundImage;
 	Mat* mBackgroundMask;
-	
+
+	Mat* mPatternImage;
+	Mat* mDecodedImage;
+	Mat* mPatternMask;
+
 	private:
 	double dGain;
 	double dExposure;

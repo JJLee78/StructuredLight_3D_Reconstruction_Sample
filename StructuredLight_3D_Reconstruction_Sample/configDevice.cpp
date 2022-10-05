@@ -101,8 +101,6 @@ projParam::projParam()
 
 
 	// Gray code 생성부 (매번 생성할 필요는 없고 초기에만 필요하므로, 추후에는 이미지 파일을 로딩하는 방식으로 변경해야 됨)
-	int nPatternColumn;
-	int nPatternShift;
 	Mat* mGrayCode;
 	nPatternColumn = ceil(log2(nWidth));
 	nPatternShift = floor((pow(2, nPatternColumn) - nWidth) / 2);
@@ -111,9 +109,9 @@ projParam::projParam()
 	mGrayCode = new Mat[allPatternNum];
 	for (int i = 0; i < allPatternNum; i++)
 		mGrayCode[i] = Mat::zeros(nHeight, nWidth, CV_8UC1);
-	int step = mGrayCode[0].cols / sizeof(uchar);
 	mGrayCode[0] = Scalar(255); //+
 	mGrayCode[1] = Scalar(0); //+
+	int step = mGrayCode[0].cols / sizeof(uchar);
 
 	for (int c = 0; c < nWidth; c++) { // 0 ~ 1280
 

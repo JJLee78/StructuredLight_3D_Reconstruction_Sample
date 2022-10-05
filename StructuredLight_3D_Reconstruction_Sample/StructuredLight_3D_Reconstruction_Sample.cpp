@@ -19,6 +19,7 @@ int main()
     camParam cam_1;
     projParam proj_1;
     solveParameters(&cam_1, &proj_1);
+    decodeGrayCodes(&cam_1, &proj_1);
     //InitCamera(&cam_1);
     //InitProjector(&proj_1);
     //InitGreyCode(proj_1.nWidth);

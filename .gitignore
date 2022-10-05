@@ -339,3 +339,6 @@ ASALocalRun/
 # BeatPulse healthcheck temp database
 healthchecksdb
 /config.json
+/Data
+/config - hair.json
+/config - cartman.json

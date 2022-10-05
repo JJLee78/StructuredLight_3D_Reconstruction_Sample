@@ -121,3 +121,57 @@ int solveParameters(camParam* CamParam, projParam* ProjParam)
 	}
 	return 0;
 }
+
+int decodeGrayCodes(camParam* CamParam, projParam* ProjParam)
+{
+	int allPatternNum = 2 * (ProjParam->nPatternColumn + 1);
+	CamParam->mPatternImage = new Mat[allPatternNum];
+	CamParam->mPatternMask = new Mat(CamParam->nHeight, CamParam->nWidth, CV_8UC1, Scalar(0));
+	CamParam->mDecodedImage = new Mat(CamParam->nHeight, CamParam->nWidth, CV_16UC1, Scalar(0));
+	for (int i = 0; i < allPatternNum; i++)
+	{
+		CamParam->mPatternImage[i] = Mat(CamParam->nHeight, CamParam->nWidth, CV_8UC1, 1);
+		string s("..\\Data\\" + to_string(i) + ".bmp" );
+		CamParam->mPatternImage[i] = cv::imread(s, IMREAD_GRAYSCALE);
+		if (CamParam->mPatternImage[i].empty())
+		{
+			cout << "FAILED TO READ PATTERN IMAGE" << endl;
+			exit(0);
+		}
+	}
+
+	shared_ptr<Mat> mPatternOld(new Mat(CamParam->nHeight, CamParam->nWidth, CV_8UC1, 1));
+	shared_ptr<Mat> mPatternNew(new Mat(CamParam->nHeight, CamParam->nWidth, CV_8UC1, 1));
+	shared_ptr<Mat> mMask(new Mat(CamParam->nHeight, CamParam->nWidth, CV_8UC1, 1));
+	shared_ptr<Mat> mBitPlane(new Mat(CamParam->nHeight, CamParam->nWidth, CV_8UC1, 1));
+	shared_ptr<Mat> temp(new Mat(CamParam->nHeight, CamParam->nWidth, CV_8UC1, 1));
+
+	double sl_thresh = 10;
+	
+	cv::absdiff(*mPatternOld, *mPatternNew, *temp);
+	cv::compare(*temp, sl_thresh, *temp, CMP_GE);
+	cv::bitwise_or(*temp, *CamParam->mPatternMask, *CamParam->mPatternMask);
+
+	for (int i = 0; i < ProjParam->nPatternColumn; i++) {
+		*mPatternOld = CamParam->mPatternImage[2 * (i + 1)];
+		*mPatternNew = CamParam->mPatternImage[(2 * (i + 1)) + 1];
+		
+		cv::compare(*mPatternOld, *mPatternNew, *mBitPlane, CMP_GE); //gray1이 gray2의 픽셀값 이상일 때(빛이 있을 때) 결과를 bit_plane_2에 저장
+
+		if (i == 0)
+			mBitPlane->copyTo(*mMask);
+		else
+			cv::bitwise_xor(*mMask, *mBitPlane, *mMask);
+
+		add(*CamParam->mDecodedImage, Scalar(pow(2.0, ProjParam->nPatternColumn - i - 1)), *CamParam->mDecodedImage, *mMask); //bit_plane_1로 마스크된 각 픽셀마다 패턴 장수별로 1024, 512, 256 ..등등의 스칼라 값을 더함. bit_plane_1은 8비트 이미지므로, 동일한 픽셀에서 bit_plane_1에선 255면 값을 더하고, 0이면 더하지 않는다.
+	}
+	//정리하자면 결국 모든 장수에서 흰색 줄이 highlited 되면 그만큼의 가중치를 더하게 된다.
+	//낮고, 듬성듬성한 패턴에서는 가중치가 높고, 높고 세밀한 패턴에서는 가중치가 그만큼 낮다.
+	// 가중치는 1024, 512, 256 ... 등등 2의 n제곱 형태로 나타난다.
+	subtract(*CamParam->mDecodedImage, Scalar(ProjParam->nPatternShift), *CamParam->mDecodedImage);
+	//for (int i = 0; i < 90; i++)
+	//{
+	//	printf("%d\n", CamParam->mDecodedImage->at<unsigned short>(0, i));
+	//}
+	return 0;
+}

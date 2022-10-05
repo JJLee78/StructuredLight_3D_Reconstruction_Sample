@@ -9,3 +9,4 @@
 using namespace cv;
 using namespace std;
 int solveParameters(camParam* CamParam, projParam* ProjParam);
+int decodeGrayCodes(camParam* CamParam, projParam* ProjParam);
