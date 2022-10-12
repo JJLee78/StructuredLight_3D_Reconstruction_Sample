@@ -18,6 +18,11 @@ class camParam
 	int nWidth;
 	int nHeight;
 	int nSize;
+	float fDistanceMin;
+	float fDistanceMax;
+	float fDistanceReect;
+	float fDepthThreshold;
+
 	Mat* mIntrinsic;
 	Mat* mDistortion;
 	Mat* mExtrinsic;
@@ -30,6 +35,8 @@ class camParam
 	Mat* mPatternImage;
 	Mat* mDecodedImage;
 	Mat* mPatternMask;
+	Mat* mTextureImage;
+	Mat* mTextureColor;
 
 	private:
 	double dGain;

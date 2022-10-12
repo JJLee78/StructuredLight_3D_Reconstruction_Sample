@@ -13,6 +13,9 @@ int solveParameters(camParam* CamParam, projParam* ProjParam)
 	rotationTemp = ProjParam->mExtrinsic->row(0);
 	Rodrigues(rotationTemp, proRotation);
 
+	//transpose(ProjParam->mExtrinsic->row(1), proTranslation);
+	//*ProjParam->mCenter = proRotation.inv() * proTranslation * -1; // Camera position = -R^-1 * (0-T) = -R^-1 * T
+
 	transpose(CamParam->mExtrinsic->row(1), camTranslation);
 	*CamParam->mCenter = camRotation.inv() * camTranslation * -1; // Camera position = -R^-1 * (0-T) = -R^-1 * T
 
@@ -88,7 +91,7 @@ int solveParameters(camParam* CamParam, projParam* ProjParam)
 		// point2 : 광선평면상의 하나의 3D 점에서 centroid를 뺌
 		// A : points2^T * points
 		float plane[4];
-		Mat centroid = Mat::zeros(1, points.cols, CV_32FC1);
+		Mat centroid = Mat::zeros(1, points.cols, CV_32FC1); 
 		for (int x = 0; x < points.cols; x++) { // 0 - 3
 			for (int y = 0; y < points.rows; y++) // 0 - height
 				centroid.at<float>(x) += points.at<float>(points.cols * y + x);
@@ -114,10 +117,28 @@ int solveParameters(camParam* CamParam, projParam* ProjParam)
 			plane[c] = V.at<float>(points.cols * (points.cols - 1) + c);
 			plane[points.cols] += plane[c] * centroid.at<float>(c);
 		}
-		//cout << "cent rows/cols : "<< centroid.rows << " " << centroid.cols  << endl;
-		//cout << centroid << endl;
+
 		for (int i = 0; i < 4; i++)
+		{
 			ProjParam->mColPlanes->at<float>(4 * x + i) = plane[i];
+		}
+		if (x == 640)
+		{
+			//cout << "---640---" << endl;
+			//for (int i = 0; i < 4; i++)
+			//{
+			//	//cout << "plane[i] : " << plane[i] << endl;
+			//	//cout << ProjParam->mColPlanes->data[4 * x + i];
+			//}
+			//cout << endl;
+			//for (int i = 0; i < 4; i++)
+			//{
+			//	//cout << "plane[i] : " << plane[i] << endl;
+			//	cout << ProjParam->mColPlanes->at<float>(4 * x + i);
+			//}
+			//cout << endl;
+			//cout << "---end---" << endl;
+		}
 	}
 	return 0;
 }
@@ -126,36 +147,43 @@ int decodeGrayCodes(camParam* CamParam, projParam* ProjParam)
 {
 	int allPatternNum = 2 * (ProjParam->nPatternColumn + 1);
 	CamParam->mPatternImage = new Mat[allPatternNum];
-	CamParam->mPatternMask = new Mat(CamParam->nHeight, CamParam->nWidth, CV_8UC1, Scalar(0));
+	CamParam->mPatternMask = new Mat(1, CamParam->nSize, CV_32FC1, Scalar(0));
 	CamParam->mDecodedImage = new Mat(CamParam->nHeight, CamParam->nWidth, CV_16UC1, Scalar(0));
+//	CamParam->mTextureColor = new Mat(3, CamParam->nSize, CV_32FC1);
+
+	//CamParam->mTextureImage = new Mat(CamParam->nHeight, CamParam->nWidth);
 	for (int i = 0; i < allPatternNum; i++)
 	{
 		CamParam->mPatternImage[i] = Mat(CamParam->nHeight, CamParam->nWidth, CV_8UC1, 1);
-		string s("..\\Data\\" + to_string(i) + ".bmp" );
+		string s("..\\Data_cartman\\" + to_string(i) + ".bmp");
 		CamParam->mPatternImage[i] = cv::imread(s, IMREAD_GRAYSCALE);
 		if (CamParam->mPatternImage[i].empty())
 		{
 			cout << "FAILED TO READ PATTERN IMAGE" << endl;
 			exit(0);
 		}
+		//if( i == 0)
+		//	*CamParam->mTextureImage = cv::imread(s, IMREAD_COLOR);
 	}
 
-	shared_ptr<Mat> mPatternOld(new Mat(CamParam->nHeight, CamParam->nWidth, CV_8UC1, 1));
-	shared_ptr<Mat> mPatternNew(new Mat(CamParam->nHeight, CamParam->nWidth, CV_8UC1, 1));
-	shared_ptr<Mat> mMask(new Mat(CamParam->nHeight, CamParam->nWidth, CV_8UC1, 1));
-	shared_ptr<Mat> mBitPlane(new Mat(CamParam->nHeight, CamParam->nWidth, CV_8UC1, 1));
-	shared_ptr<Mat> temp(new Mat(CamParam->nHeight, CamParam->nWidth, CV_8UC1, 1));
+	shared_ptr<Mat> mPatternOld(new Mat(CamParam->nHeight, CamParam->nWidth, CV_8UC1));
+	shared_ptr<Mat> mPatternNew(new Mat(CamParam->nHeight, CamParam->nWidth, CV_8UC1));
+	shared_ptr<Mat> mMask(new Mat(CamParam->nHeight, CamParam->nWidth, CV_8UC1));
+	shared_ptr<Mat> mBitPlane(new Mat(CamParam->nHeight, CamParam->nWidth, CV_8UC1));
+	shared_ptr<Mat> temp(new Mat(CamParam->nHeight, CamParam->nWidth, CV_8UC1));
 
-	double sl_thresh = 10;
-	
+	double threshold = 32; //디코딩 스레숄드, 값이 높을수록 디코딩 영역이 넓어짐
+	*mPatternOld = CamParam->mPatternImage[0];
+	*mPatternNew = CamParam->mPatternImage[1];
+
 	cv::absdiff(*mPatternOld, *mPatternNew, *temp);
-	cv::compare(*temp, sl_thresh, *temp, CMP_GE);
-	cv::bitwise_or(*temp, *CamParam->mPatternMask, *CamParam->mPatternMask);
+	cv::compare(*temp, threshold, *temp, CMP_GE);
+	cv::bitwise_or(*temp, *CamParam->mBackgroundMask, *CamParam->mBackgroundMask);
 
 	for (int i = 0; i < ProjParam->nPatternColumn; i++) {
 		*mPatternOld = CamParam->mPatternImage[2 * (i + 1)];
 		*mPatternNew = CamParam->mPatternImage[(2 * (i + 1)) + 1];
-		
+
 		cv::compare(*mPatternOld, *mPatternNew, *mBitPlane, CMP_GE); //gray1이 gray2의 픽셀값 이상일 때(빛이 있을 때) 결과를 bit_plane_2에 저장
 
 		if (i == 0)
@@ -169,9 +197,163 @@ int decodeGrayCodes(camParam* CamParam, projParam* ProjParam)
 	//낮고, 듬성듬성한 패턴에서는 가중치가 높고, 높고 세밀한 패턴에서는 가중치가 그만큼 낮다.
 	// 가중치는 1024, 512, 256 ... 등등 2의 n제곱 형태로 나타난다.
 	subtract(*CamParam->mDecodedImage, Scalar(ProjParam->nPatternShift), *CamParam->mDecodedImage);
-	//for (int i = 0; i < 90; i++)
-	//{
-	//	printf("%d\n", CamParam->mDecodedImage->at<unsigned short>(0, i));
-	//}
+	cv::compare(*CamParam->mDecodedImage, Scalar(ProjParam->nWidth - 1), *temp, CMP_LE);
+	cv::bitwise_and(*temp, *CamParam->mBackgroundMask, *CamParam->mBackgroundMask);
+	cv::compare(*CamParam->mDecodedImage, 0, *temp, CMP_GE);
+	cv::bitwise_and(*temp, *CamParam->mBackgroundMask, *CamParam->mBackgroundMask);
+	cv::bitwise_not(*CamParam->mBackgroundMask, *temp);
+
+	return 0;
+}
+
+int recostruct3D(camParam* CamParam, projParam* ProjParam)
+{
+	shared_ptr<Mat> points(new Mat(3, CamParam->nSize, CV_32FC1));
+	shared_ptr<Mat> colors(new Mat(3, CamParam->nSize, CV_32FC1));
+	shared_ptr<Mat> depth_map(new Mat(CamParam->nHeight, CamParam->nWidth, CV_32FC1));
+	shared_ptr<Mat> mask(new Mat(1, CamParam->nSize, CV_32FC1, Scalar(0)));
+
+
+	int correspond_max = 100;
+	int correspond_min = 100;
+	int depth_counter = 0;
+	uchar* gray_mask_data;
+
+	for (int r = 0; r < CamParam->nHeight; r++) 
+	{
+		for (int c = 0; c < CamParam->nWidth; c++) 
+		{ 
+			if (CamParam->mBackgroundMask->at<uchar>(r * CamParam->nWidth + c)) //mBackgroundMask가 0이 아닐 시
+			{
+				float pointCol[3], point_rows[3];
+				float depthCol, depth_rows;
+
+				// 픽셀별 카메라 line(ray)과 plane equation을 intersection, ray-plane intersection
+				float q[3], v[3], w[4];
+				int rc = (CamParam->nWidth) * r + c; //r : cam_h / c : cam_w
+				for (int i = 0; i < 3; i++) {
+					q[i] = CamParam->mCenter->at<float>(i);
+					v[i] = CamParam->mLine->at<float>(rc + CamParam->nSize * i);
+				}
+
+				int corresponding_column = CamParam->mDecodedImage->at<unsigned short>(r * CamParam->nWidth + c); //디코딩 된 이미지에서 pixel 단위로 가져와 최대/최소값 계산.
+				if (corresponding_column > correspond_max)
+					correspond_max = corresponding_column;
+				if (corresponding_column < correspond_min && corresponding_column != 0)
+					correspond_min = corresponding_column;
+
+				for (int i = 0; i < 4; i++)
+					w[i] = ProjParam->mColPlanes->at<float>(4 * corresponding_column + i); // Best Fit K-plane 결과값으로 얻은 plane
+
+				/*if (r == 500 && c == 600) //검증용
+				{
+					cout << " q[0] v[0] w[0] w[1] : " << q[0] << " / " << v[0] << " / " << w[0] << " / " << w[1] << endl;
+					cout << " q[1] v[1] w[2]	  : " << q[1] << " / " << v[1] << " / " << w[2] << endl;
+					cout << " q[2] v[2] w[3]	  : " << q[2] << " / " << v[2] << " / " << w[3] << endl;
+				}*/
+
+
+				float nq = 0, nv = 0;
+				for (int i = 0; i < 3; i++) {
+					nq += w[i] * q[i]; //q : mCenter
+					nv += w[i] * v[i]; //v : mLine
+				}
+
+				// plane(w-nq)  ray(nv) intersection
+				depthCol = (w[3] - nq) / nv;
+				for (int i = 0; i < 3; i++)
+					pointCol[i] = q[i] + depthCol * v[i];
+
+				// 삼각측량으로 depth를 계산
+				depth_map->at<float>(CamParam->nWidth * r + c) = depthCol;
+				for (int i = 0; i < 3; i++)
+					points->at<float>(CamParam->nWidth * r + c + CamParam->nSize * i) = pointCol[i];
+
+				if (r == 1024 && c == 1536)
+				{
+					cout << "depth_cols : " << depth_map->at<float>(CamParam->nWidth * r + c) << endl;
+					cout << "points : " << points->at<float>(CamParam->nWidth * r + c + CamParam->nSize * 0) << " "
+						<< points->at<float>(CamParam->nWidth * r + c + CamParam->nSize * 1) << " "
+						<< points->at<float>(CamParam->nWidth * r + c + CamParam->nSize * 2) << endl;
+				}
+				
+				CamParam->mPatternMask->at<float>(CamParam->nWidth * r + c) = 1;
+
+				// 절두체를 만들기 위해 fDistance의 거리 내에 있는 depth만 출력
+				if (depth_map->at<float>(CamParam->nWidth * r + c) < CamParam->fDistanceMin ||
+					depth_map->at<float>(CamParam->nWidth * r + c) > CamParam->fDistanceMax)
+				{
+					depth_counter++;
+					CamParam->mBackgroundMask->at<uchar>(r * CamParam->nWidth + c) = 0;
+					CamParam->mPatternMask->at<float>(CamParam->nWidth * r + c) = 0;
+					depth_map->at<float>(CamParam->nWidth * r + c) = 0;
+					for (int i = 0; i < 3; i++)
+						points->at<float>(CamParam->nWidth * r + c + CamParam->nSize * i) = 0;
+					//텍스처 컬러링
+				}
+
+			}
+		}
+	}
+
+	//cout << "depth_counter : " << depth_counter << endl;
+	char str[1024], outputDir[1024]; int scanindex = 3;
+	//cv::FileStorage file("depth_map.ext", cv::FileStorage::WRITE);
+	//file << "matName" << *depth_map;
+	string s("..\\Data\\");
+
+	sprintf(outputDir, "%stestobject.ply", s);
+
+	Mat depth_map_image = Mat(CamParam->nHeight, CamParam->nWidth, CV_8U, 1);
+	for (int r = 0; r < CamParam->nHeight; r++) {
+		for (int c = 0; c < CamParam->nWidth; c++) {
+			if (CamParam->mPatternMask->at<float>(r * CamParam->nWidth + c))
+			{
+				depth_map_image.at<unsigned char>(CamParam->nWidth* r + c) = 
+				(uchar)(255 - int(255 * (depth_map->at<float>(CamParam->nWidth * r + c) - CamParam->fDistanceMin) / (CamParam->fDistanceMax - CamParam->fDistanceMin)));
+			}
+			else
+				depth_map_image.at<unsigned char>(CamParam->nWidth* r + c) = 0;
+		}
+	}
+	cv::namedWindow("depthmap", CV_WINDOW_AUTOSIZE);
+
+	Mat camrt2 = depth_map_image;
+	resize(camrt2, camrt2, Size(CamParam->nWidth / 4, CamParam->nHeight / 4));
+	imshow("depthmap", camrt2);
+	waitKey(0);
+
+	FILE* pFile = fopen(outputDir, "w");
+	if (pFile == NULL) {
+		fprintf(stderr, "\n");
+		return -1;
+	}
+	fprintf(pFile, "ply\n");
+	fprintf(pFile, "format ascii 1.0\n");
+	
+	if (points != NULL) {
+		int cnt = 0;
+		for (int c = 0; c < points->cols; c++) {
+			if (CamParam->mPatternMask == NULL || CamParam->mPatternMask->at<float>(c) != 0)
+				cnt++;
+		}
+		fprintf(pFile, "element vertex %d\n", cnt);
+		fprintf(pFile, "property float x\nproperty float y\nproperty float z\n");
+		fprintf(pFile, "end_header\n");
+		cout << "vertex : " << cnt << endl;
+		for (int c = 0; c < points->cols; c++) {
+			if (CamParam->mPatternMask == NULL || CamParam->mPatternMask->at<float>(c) != 0) {
+
+				for (int r = 0; r < points->rows; r++) {
+					if (r != 1)
+						fprintf(pFile, "    %f ", points->at<float>(c + points->cols * r));
+					else
+						fprintf(pFile, "    %f ", points->at<float>(c + points->cols * r));
+				}
+				fprintf(pFile, "\n");
+			}
+		}
+	}
+
 	return 0;
 }

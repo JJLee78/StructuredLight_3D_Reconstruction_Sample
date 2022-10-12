@@ -342,3 +342,30 @@ healthchecksdb
 /Data
 /config - hair.json
 /config - cartman.json
+/StructuredLight_3D_Reconstruction_Sample/ testobject.ply
+/StructuredLight_3D_Reconstruction_Sample/testobject.ply
+/StructuredLight_3D_Reconstruction_Sample/mcolplanes.ext
+/StructuredLight_3D_Reconstruction_Sample/depth_map.ext
+/StructuredLight_3D_Reconstruction_Sample/mask.ext
+/Data_cartman/9.bmp
+/Data_cartman/8.bmp
+/Data_cartman/7.bmp
+/Data_cartman/6.bmp
+/Data_cartman/5.bmp
+/Data_cartman/4.bmp
+/Data_cartman/3.bmp
+/Data_cartman/21.bmp
+/Data_cartman/20.bmp
+/Data_cartman/2.bmp
+/Data_cartman/19.bmp
+/Data_cartman/18.bmp
+/Data_cartman/17.bmp
+/Data_cartman/16.bmp
+/Data_cartman/15.bmp
+/Data_cartman/14.bmp
+/Data_cartman/13.bmp
+/Data_cartman/12.bmp
+/Data_cartman/11.bmp
+/Data_cartman/10.bmp
+/Data_cartman/1.bmp
+/Data_cartman/0.bmp

@@ -29,9 +29,15 @@ camParam::camParam()
 	mExtrinsic = new Mat(Mat::zeros(2, 3, CV_32F)); //카메라 외부 파라미터
 	mCenter = new Mat(Mat::zeros(3, 1, CV_32F)); //카메라 중심 좌표
 	mLine = new Mat(Mat::zeros(3, nSize, CV_32F)); //카메라 광축 행렬(단위 방향벡터)
-	mDepthMap = new Mat(Mat::zeros(nWidth, nHeight, CV_32F)); //깊이 정보(Depthmap)
-	mBackgroundImage = new Mat(Mat::zeros(nWidth, nHeight, CV_8UC3)); //카메라 이미지 배경
-	mBackgroundMask = new Mat(nWidth, nHeight, CV_8UC1, cv::Scalar(255)); //카메라 이미지 배경(마스크)
+	mDepthMap = new Mat(Mat::zeros(nHeight, nWidth, CV_32F)); //깊이 정보(Depthmap)
+	mBackgroundImage = new Mat(Mat::zeros(nHeight, nWidth, CV_8UC3)); //카메라 이미지 배경
+	mBackgroundMask = new Mat(Mat::zeros(nHeight, nWidth, CV_8UC1)); //카메라 이미지 배경(마스크)
+
+	fDistanceMin = -200.f;
+	fDistanceMax = 2000.f;
+	fDistanceReect = 0.f;
+	fDepthThreshold = 0.f;
+
 
 	memcpy(mIntrinsic->data, intrinsicVal, sizeof(intrinsicVal));
 	memcpy(mDistortion->data, distortionVal, sizeof(distortionVal));
@@ -112,9 +118,8 @@ projParam::projParam()
 	mGrayCode[0] = Scalar(255); //+
 	mGrayCode[1] = Scalar(0); //+
 	int step = mGrayCode[0].cols / sizeof(uchar);
-
-	for (int c = 0; c < nWidth; c++) { // 0 ~ 1280
-
+	for (int c = 0; c < nWidth; c++) 
+	{ // 0 ~ 1280
 		for (int i = 0; i < allPatternNum-2; i += 2) { // 0 - 22
 			uchar* data = (uchar*)mGrayCode[i + 2].data;
 			if (i > 0)
