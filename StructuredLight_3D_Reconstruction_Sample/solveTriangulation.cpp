@@ -1,6 +1,17 @@
 ﻿#include "solveTriangulation.h"
 
 
+//T//
+#include <chrono>
+chrono::system_clock::time_point StartTime;
+chrono::system_clock::time_point EndTime;
+float FinalTime;
+#define TSTART StartTime = chrono::system_clock::now();
+#define TEND EndTime = chrono::system_clock::now();
+#define TPRINT cout <<  "ELPASED " << chrono::duration_cast<chrono::milliseconds>(EndTime - StartTime).count() << " ms" <<endl;
+//T//
+
+
 int solveParameters(camParam* CamParam, projParam* ProjParam)
 {
 	Mat rotationTemp(1, 3, CV_32F);
@@ -12,12 +23,16 @@ int solveParameters(camParam* CamParam, projParam* ProjParam)
 	Rodrigues(rotationTemp, camRotation);
 	rotationTemp = ProjParam->mExtrinsic->row(0);
 	Rodrigues(rotationTemp, proRotation);
-
+	
 	//transpose(ProjParam->mExtrinsic->row(1), proTranslation);
 	//*ProjParam->mCenter = proRotation.inv() * proTranslation * -1; // Camera position = -R^-1 * (0-T) = -R^-1 * T
 
 	transpose(CamParam->mExtrinsic->row(1), camTranslation);
 	*CamParam->mCenter = camRotation.inv() * camTranslation * -1; // Camera position = -R^-1 * (0-T) = -R^-1 * T
+	if (bIsHaveCuda())
+		cout << "CUDA ENABLE" << endl;
+	else
+		cout << "CUDA DISABLE" << endl;
 
 	// 영상 좌표를 카메라 좌표로 전환	
 	Mat camDistorted(CamParam->nSize, 1, CV_32FC2);
@@ -31,7 +46,10 @@ int solveParameters(camParam* CamParam, projParam* ProjParam)
 			p1[1] = float(y);
 		}
 	}
+	TSTART;
 	undistortPoints(camDistorted, camUndistorted, *CamParam->mIntrinsic, *CamParam->mDistortion);
+	TEND;
+	TPRINT;
 
 	//카메라 좌표계를 기준으로, 카메라 투사중심을 통과하는 방향벡터를 계산함
 	for (int i = 0; i < CamParam->nSize; i++) {
@@ -140,6 +158,8 @@ int solveParameters(camParam* CamParam, projParam* ProjParam)
 			//cout << "---end---" << endl;
 		}
 	}
+
+
 	return 0;
 }
 
@@ -150,7 +170,7 @@ int decodeGrayCodes(camParam* CamParam, projParam* ProjParam)
 	CamParam->mPatternMask = new Mat(1, CamParam->nSize, CV_32FC1, Scalar(0));
 	CamParam->mDecodedImage = new Mat(CamParam->nHeight, CamParam->nWidth, CV_16UC1, Scalar(0));
 //	CamParam->mTextureColor = new Mat(3, CamParam->nSize, CV_32FC1);
-
+	TSTART;
 	//CamParam->mTextureImage = new Mat(CamParam->nHeight, CamParam->nWidth);
 	for (int i = 0; i < allPatternNum; i++)
 	{
@@ -202,7 +222,8 @@ int decodeGrayCodes(camParam* CamParam, projParam* ProjParam)
 	cv::compare(*CamParam->mDecodedImage, 0, *temp, CMP_GE);
 	cv::bitwise_and(*temp, *CamParam->mBackgroundMask, *CamParam->mBackgroundMask);
 	cv::bitwise_not(*CamParam->mBackgroundMask, *temp);
-
+	TEND;
+	TPRINT;
 	return 0;
 }
 
@@ -218,7 +239,7 @@ int recostruct3D(camParam* CamParam, projParam* ProjParam)
 	int correspond_min = 100;
 	int depth_counter = 0;
 	uchar* gray_mask_data;
-
+	TSTART;
 	for (int r = 0; r < CamParam->nHeight; r++) 
 	{
 		for (int c = 0; c < CamParam->nWidth; c++) 
@@ -295,6 +316,8 @@ int recostruct3D(camParam* CamParam, projParam* ProjParam)
 			}
 		}
 	}
+	TEND;
+	TPRINT;
 
 	//cout << "depth_counter : " << depth_counter << endl;
 	char str[1024], outputDir[1024]; int scanindex = 3;
@@ -303,7 +326,7 @@ int recostruct3D(camParam* CamParam, projParam* ProjParam)
 	string s("..\\Data\\");
 
 	sprintf(outputDir, "%stestobject.ply", s);
-
+	TSTART;
 	Mat depth_map_image = Mat(CamParam->nHeight, CamParam->nWidth, CV_8U, 1);
 	for (int r = 0; r < CamParam->nHeight; r++) {
 		for (int c = 0; c < CamParam->nWidth; c++) {
@@ -316,6 +339,8 @@ int recostruct3D(camParam* CamParam, projParam* ProjParam)
 				depth_map_image.at<unsigned char>(CamParam->nWidth* r + c) = 0;
 		}
 	}
+	TEND;
+	TPRINT;
 	cv::namedWindow("depthmap", CV_WINDOW_AUTOSIZE);
 
 	Mat camrt2 = depth_map_image;

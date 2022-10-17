@@ -151,8 +151,8 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>opencv_world349.lib;opencv_face349.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)libs\OpenCV_3.4.9\lib\Release\</AdditionalLibraryDirectories>
+      <AdditionalDependencies>opencv_world349.lib;opencv_face349.lib;cuda_algs.lib;cudnn.lib;cuda.lib;cudart.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)libs\OpenCV_3.4.9\lib\Release\;$(SolutionDir)libs\cuda_algs\x64\Release\</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
